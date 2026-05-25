@@ -10,7 +10,7 @@
  * Or just include this script and use the global `ContractLensAPI` object.
  */
 
-const API_BASE = window.location.origin; // Same server = same origin, always correct
+const API_BASE =https://contractlens-app-kd41.vercel.app; // Same server = same origin, always correct
 
 // ── Error class ─────────────────────────────────────────────────────────
 class APIError extends Error {
