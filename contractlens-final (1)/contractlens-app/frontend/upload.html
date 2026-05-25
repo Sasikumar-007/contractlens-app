@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Upload Contract — ContractLens</title>
+  <link rel="stylesheet" href="/css/design.css"/>
+  <style>
+    .page-wrap{min-height:calc(100vh - 60px);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:var(--sp-2xl) var(--sp-lg);}
+    .upload-card{background:var(--surface-lowest);border:1px solid var(--outline-variant);border-radius:var(--radius-xl);padding:var(--sp-2xl);width:100%;max-width:560px;box-shadow:var(--shadow-card);}
+    .upload-header{text-align:center;margin-bottom:var(--sp-xl);}
+    .upload-header h1{font-size:24px;font-weight:700;letter-spacing:-0.02em;color:var(--on-surface);margin-bottom:8px;}
+    .upload-header p{font-size:14px;color:var(--on-surface-variant);line-height:21px;}
+    .drop-zone{border:2px dashed var(--outline-variant);border-radius:var(--radius-xl);padding:var(--sp-2xl) var(--sp-xl);text-align:center;cursor:pointer;transition:all 200ms;position:relative;background:var(--surface-low);}
+    .drop-zone:hover,.drop-zone.dragover{border-color:var(--primary);background:var(--on-primary-container);}
+    .drop-zone input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+    .drop-icon{width:56px;height:56px;background:var(--surface-container);border-radius:var(--radius-xl);display:flex;align-items:center;justify-content:center;margin:0 auto var(--sp-md);border:1px solid var(--outline-variant);}
+    .drop-icon svg{width:26px;height:26px;color:var(--primary);}
+    .drop-title{font-size:15px;font-weight:600;color:var(--on-surface);margin-bottom:6px;}
+    .drop-subtitle{font-size:13px;color:var(--on-surface-variant);}
+    .drop-or{margin:var(--sp-md) 0;font-size:12px;color:var(--outline);position:relative;}
+    .drop-or::before,.drop-or::after{content:'';position:absolute;top:50%;width:40%;height:1px;background:var(--outline-variant);}
+    .drop-or::before{left:0;}.drop-or::after{right:0;}
+    .file-selected{display:none;background:var(--surface-low);border:1px solid var(--outline-variant);border-radius:var(--radius-lg);padding:12px 16px;margin-top:var(--sp-md);align-items:center;gap:12px;}
+    .file-selected.visible{display:flex;}
+    .file-icon{width:36px;height:36px;background:var(--on-primary-container);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+    .file-icon svg{width:18px;height:18px;color:var(--primary);}
+    .file-info{flex:1;min-width:0;}
+    .file-name{font-size:13px;font-weight:500;color:var(--on-surface);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .file-size{font-size:12px;color:var(--on-surface-variant);}
+    .file-remove{background:none;border:none;cursor:pointer;color:var(--on-surface-variant);padding:4px;border-radius:var(--radius);transition:color 150ms;}
+    .file-remove:hover{color:var(--error);}
+    .analyse-btn{width:100%;margin-top:var(--sp-lg);padding:14px;font-size:15px;background:var(--primary);color:var(--on-primary);border:none;border-radius:var(--radius);cursor:pointer;font-family:var(--font-primary);font-weight:600;transition:all 150ms;display:flex;align-items:center;justify-content:center;gap:8px;opacity:0.45;pointer-events:none;}
+    .analyse-btn.active{opacity:1;pointer-events:all;}
+    .analyse-btn.active:hover{background:var(--primary-container);transform:translateY(-1px);box-shadow:0 4px 12px rgba(53,37,205,0.25);}
+    .analyse-btn:disabled{opacity:0.6;cursor:not-allowed;pointer-events:none;}
+    .progress-section{display:none;margin-top:var(--sp-lg);}
+    .progress-section.visible{display:block;}
+    .progress-label{font-size:13px;font-weight:500;color:var(--on-surface);margin-bottom:8px;display:flex;justify-content:space-between;}
+    .progress-bar-wrap{height:6px;background:var(--outline-variant);border-radius:var(--radius-full);overflow:hidden;}
+    .progress-bar{height:100%;background:var(--primary);border-radius:var(--radius-full);transition:width 0.6s ease;width:0%;}
+    .progress-step{font-size:12px;color:var(--on-surface-variant);margin-top:6px;}
+    .error-box{display:none;margin-top:var(--sp-md);background:var(--error-container);border:1px solid var(--risk-high-border);border-radius:var(--radius-lg);padding:12px 14px;}
+    .error-box.visible{display:flex;gap:10px;align-items:flex-start;}
+    .error-box svg{color:var(--error);flex-shrink:0;width:16px;height:16px;margin-top:2px;}
+    .error-box p{font-size:13px;color:var(--on-error-container);line-height:19px;}
+    .constraints{display:flex;align-items:center;justify-content:center;gap:var(--sp-lg);margin-top:var(--sp-md);flex-wrap:wrap;}
+    .constraint{font-size:12px;color:var(--on-surface-variant);display:flex;align-items:center;gap:4px;font-family:var(--font-label);}
+    .notice{margin-top:var(--sp-lg);display:flex;align-items:flex-start;gap:10px;background:var(--on-primary-container);border-radius:var(--radius-lg);padding:12px 14px;}
+    .notice svg{width:16px;height:16px;color:var(--primary);flex-shrink:0;margin-top:1px;}
+    .notice p{font-size:12px;color:var(--primary);line-height:18px;}
+  </style>
+</head>
+<body>
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="/" class="nav-logo">
+      <div class="nav-logo-mark">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h8M4 8h8M4 12h5"/><circle cx="13" cy="12" r="2" fill="currentColor" stroke="none"/></svg>
+      </div>ContractLens
+    </a>
+    <div class="nav-links"><a href="/" class="nav-link">← Back to home</a></div>
+  </div>
+</nav>
+<div class="page-wrap">
+  <div class="upload-card fade-up">
+    <div class="upload-header">
+      <h1>Upload your contract</h1>
+      <p>AI analyses every clause and explains risks in plain English — under 60 seconds.</p>
+    </div>
+    <div class="drop-zone" id="dropZone">
+      <input type="file" id="fileInput" accept=".pdf,.doc,.docx" aria-label="Upload contract file"/>
+      <div class="drop-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="12" y2="12"/><line x1="15" y1="15" x2="12" y2="12"/></svg></div>
+      <div class="drop-title">Drop your contract here</div>
+      <div class="drop-subtitle">PDF, DOC, or DOCX</div>
+      <div class="drop-or">or</div>
+      <div style="display:inline-flex;align-items:center;gap:6px;background:var(--surface-lowest);border:1px solid var(--outline-variant);border-radius:var(--radius);padding:8px 16px;font-size:13px;font-weight:500;pointer-events:none;">Browse files</div>
+    </div>
+    <div class="file-selected" id="fileSelected">
+      <div class="file-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+      <div class="file-info"><div class="file-name" id="fileName">—</div><div class="file-size" id="fileSize">—</div></div>
+      <button class="file-remove" id="fileRemove"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <button class="analyse-btn" id="analyseBtn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      Analyse contract
+    </button>
+    <div class="progress-section" id="progressSection">
+      <div class="progress-label"><span id="progressLabel">Uploading…</span><span id="progressPct">0%</span></div>
+      <div class="progress-bar-wrap"><div class="progress-bar" id="progressBar"></div></div>
+      <div class="progress-step" id="progressStep">Sending to server</div>
+    </div>
+    <div class="error-box" id="errorBox">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <p id="errorMsg">Something went wrong. Please try again.</p>
+    </div>
+    <div class="constraints">
+      <div class="constraint">Max 20MB</div>
+      <div class="constraint">PDF · DOC · DOCX</div>
+      <div class="constraint">Results in ~60s</div>
+    </div>
+    <div class="notice">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      <p>Your document is deleted immediately after analysis. Never stored or shared.</p>
+    </div>
+  </div>
+</div>
+<script src="/js/api.js"></script>
+<script>
+const { uploadContract, pollUntilDone, navigateToResults } = ContractLensAPI;
+const dropZone=document.getElementById('dropZone'),fileInput=document.getElementById('fileInput');
+const fileSelected=document.getElementById('fileSelected'),fileNameEl=document.getElementById('fileName');
+const fileSizeEl=document.getElementById('fileSize'),fileRemoveBtn=document.getElementById('fileRemove');
+const analyseBtn=document.getElementById('analyseBtn'),progressSection=document.getElementById('progressSection');
+const progressBar=document.getElementById('progressBar'),progressLabel=document.getElementById('progressLabel');
+const progressPct=document.getElementById('progressPct'),progressStep=document.getElementById('progressStep');
+const errorBox=document.getElementById('errorBox'),errorMsgEl=document.getElementById('errorMsg');
+let selectedFile=null;
+
+const fmt=b=>b<1024?b+' B':b<1048576?(b/1024).toFixed(1)+' KB':(b/1048576).toFixed(1)+' MB';
+
+function setFile(f){
+  selectedFile=f;fileNameEl.textContent=f.name;fileSizeEl.textContent=fmt(f.size);
+  fileSelected.classList.add('visible');analyseBtn.classList.add('active');
+  errorBox.classList.remove('visible');
+}
+function clearFile(){selectedFile=null;fileInput.value='';fileSelected.classList.remove('visible');analyseBtn.classList.remove('active');}
+function setProgress(pct,label,step){progressBar.style.width=pct+'%';progressPct.textContent=pct+'%';progressLabel.textContent=label;if(step)progressStep.textContent=step;}
+function showError(msg){errorMsgEl.textContent=msg;errorBox.classList.add('visible');progressSection.classList.remove('visible');analyseBtn.disabled=false;analyseBtn.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> Try again';analyseBtn.classList.add('active');}
+
+fileInput.addEventListener('change',()=>{if(fileInput.files[0])setFile(fileInput.files[0]);});
+fileRemoveBtn.addEventListener('click',clearFile);
+dropZone.addEventListener('dragover',e=>{e.preventDefault();dropZone.classList.add('dragover');});
+dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop',e=>{e.preventDefault();dropZone.classList.remove('dragover');if(e.dataTransfer.files[0])setFile(e.dataTransfer.files[0]);});
+
+analyseBtn.addEventListener('click', async()=>{
+  if(!analyseBtn.classList.contains('active')||!selectedFile)return;
+  analyseBtn.disabled=true;analyseBtn.textContent='Uploading…';
+  progressSection.classList.add('visible');errorBox.classList.remove('visible');
+  setProgress(10,'Uploading file…','Sending to server');
+  try{
+    const upload=await uploadContract(selectedFile);
+    setProgress(25,'File received…','Starting analysis');
+    await pollUntilDone(upload.document_id,{
+      onProgress:(pct,label)=>setProgress(pct,label),
+      onComplete:()=>{setProgress(100,'Analysis complete!','Redirecting…');setTimeout(()=>navigateToResults(upload.document_id),600);},
+      onError:(msg)=>showError(msg)
+    });
+  }catch(e){showError(e.message);}
+});
+</script>
+</body>
+</html>

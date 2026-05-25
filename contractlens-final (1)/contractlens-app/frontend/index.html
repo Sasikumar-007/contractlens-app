@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ContractLens — Understand any contract before you sign</title>
+  <link rel="stylesheet" href="/css/design.css" />
+  <style>
+    /* ── Hero ── */
+    .hero {
+      padding: 96px 0 80px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -120px; left: 50%; transform: translateX(-50%);
+      width: 900px; height: 600px;
+      background: radial-gradient(ellipse at center, rgba(53,37,205,0.07) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-eyebrow {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--on-primary-container); color: var(--primary);
+      font-size: 12px; font-weight: 600; letter-spacing: 0.04em;
+      padding: 5px 12px; border-radius: var(--radius-full);
+      margin-bottom: var(--sp-lg);
+      font-family: var(--font-label);
+      text-transform: uppercase;
+    }
+    .hero-eyebrow span { width: 6px; height: 6px; background: var(--primary); border-radius: 50%; display: inline-block; animation: pulse 2s infinite; }
+    .hero-title {
+      font-size: clamp(36px, 5vw, 56px);
+      font-weight: 700; line-height: 1.1;
+      letter-spacing: -0.03em; color: var(--on-surface);
+      max-width: 760px; margin: 0 auto var(--sp-lg);
+    }
+    .hero-title em { font-style: normal; color: var(--primary); }
+    .hero-subtitle {
+      font-size: 18px; line-height: 28px;
+      color: var(--on-surface-variant);
+      max-width: 520px; margin: 0 auto var(--sp-xl);
+    }
+    .hero-actions { display: flex; align-items: center; justify-content: center; gap: var(--sp-md); flex-wrap: wrap; }
+    .hero-trust {
+      margin-top: var(--sp-lg);
+      font-size: 13px; color: var(--on-surface-variant);
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .hero-trust svg { color: var(--risk-low); }
+
+    /* ── Social proof strip ── */
+    .proof-strip {
+      background: var(--surface-low);
+      border-top: 1px solid var(--outline-variant);
+      border-bottom: 1px solid var(--outline-variant);
+      padding: var(--sp-md) 0;
+    }
+    .proof-strip-inner {
+      display: flex; align-items: center; justify-content: center; gap: var(--sp-2xl);
+      flex-wrap: wrap;
+    }
+    .proof-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--on-surface-variant); font-weight: 500; }
+    .proof-item svg { color: var(--primary); width: 16px; height: 16px; }
+
+    /* ── How it works ── */
+    .section { padding: var(--sp-3xl) 0; }
+    .section-label {
+      font-family: var(--font-label); font-size: 12px; font-weight: 600;
+      color: var(--primary); letter-spacing: 0.06em; text-transform: uppercase;
+      margin-bottom: var(--sp-sm);
+    }
+    .section-title { font-size: 32px; font-weight: 700; letter-spacing: -0.02em; color: var(--on-surface); margin-bottom: var(--sp-sm); line-height: 40px; }
+    .section-subtitle { font-size: 17px; color: var(--on-surface-variant); line-height: 26px; max-width: 520px; }
+
+    .steps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-lg); margin-top: var(--sp-xl); }
+    .step-card {
+      background: var(--surface-lowest);
+      border: 1px solid var(--outline-variant);
+      border-radius: var(--radius-xl);
+      padding: var(--sp-xl);
+      position: relative; overflow: hidden;
+    }
+    .step-card::before {
+      content: attr(data-step);
+      position: absolute; top: 16px; right: 20px;
+      font-size: 72px; font-weight: 800; color: var(--surface-highest);
+      line-height: 1; letter-spacing: -0.04em;
+      pointer-events: none;
+    }
+    .step-icon {
+      width: 44px; height: 44px; background: var(--surface-low);
+      border-radius: var(--radius-lg); display: flex; align-items: center; justify-content: center;
+      margin-bottom: var(--sp-md);
+      border: 1px solid var(--outline-variant);
+    }
+    .step-icon svg { width: 22px; height: 22px; color: var(--primary); }
+    .step-title { font-size: 17px; font-weight: 600; color: var(--on-surface); margin-bottom: 8px; }
+    .step-desc { font-size: 14px; color: var(--on-surface-variant); line-height: 22px; }
+
+    /* ── Who it's for ── */
+    .users-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--sp-md); margin-top: var(--sp-xl); }
+    .user-card {
+      background: var(--surface-lowest);
+      border: 1px solid var(--outline-variant);
+      border-radius: var(--radius-xl);
+      padding: var(--sp-lg);
+      transition: all 150ms;
+    }
+    .user-card:hover { border-color: var(--primary); box-shadow: var(--shadow-hover); transform: translateY(-2px); }
+    .user-emoji { font-size: 32px; margin-bottom: var(--sp-md); display: block; }
+    .user-role { font-size: 15px; font-weight: 600; color: var(--on-surface); margin-bottom: 6px; }
+    .user-scenario { font-size: 13px; color: var(--on-surface-variant); line-height: 20px; }
+    .user-risk { margin-top: var(--sp-sm); font-size: 12px; font-weight: 500; color: var(--risk-high); font-family: var(--font-label); }
+
+    /* ── Risk example preview ── */
+    .preview-section { background: var(--surface-low); border-radius: var(--radius-xl); padding: var(--sp-2xl); border: 1px solid var(--outline-variant); margin-top: var(--sp-xl); }
+    .preview-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-lg); flex-wrap: gap; gap: 12px; }
+    .preview-filename { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; color: var(--on-surface); }
+    .preview-filename svg { color: var(--primary); }
+    .preview-clauses { display: flex; flex-direction: column; gap: var(--sp-sm); }
+    .mini-clause {
+      background: var(--surface-lowest); border: 1px solid var(--outline-variant);
+      border-left: 4px solid; border-radius: var(--radius-lg);
+      padding: 12px 16px;
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+    }
+    .mini-clause.high { border-left-color: var(--risk-high); }
+    .mini-clause.medium { border-left-color: var(--risk-medium); }
+    .mini-clause.low { border-left-color: var(--risk-low); }
+    .mini-clause-text { font-size: 13px; font-weight: 500; color: var(--on-surface); margin-bottom: 2px; }
+    .mini-clause-sub { font-size: 12px; color: var(--on-surface-variant); }
+
+    /* ── Trust section ── */
+    .trust-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-lg); margin-top: var(--sp-xl); }
+    .trust-card { display: flex; align-items: flex-start; gap: var(--sp-md); }
+    .trust-icon { width: 40px; height: 40px; flex-shrink: 0; background: var(--surface-low); border-radius: var(--radius-lg); display: flex; align-items: center; justify-content: center; border: 1px solid var(--outline-variant); }
+    .trust-icon svg { width: 20px; height: 20px; color: var(--primary); }
+    .trust-title { font-size: 15px; font-weight: 600; color: var(--on-surface); margin-bottom: 4px; }
+    .trust-desc { font-size: 13px; color: var(--on-surface-variant); line-height: 20px; }
+
+    /* ── CTA Banner ── */
+    .cta-banner {
+      background: var(--inverse-surface);
+      border-radius: var(--radius-xl);
+      padding: var(--sp-2xl) var(--sp-3xl);
+      text-align: center;
+      margin: var(--sp-3xl) 0;
+    }
+    .cta-banner h2 { font-size: 32px; font-weight: 700; color: var(--inverse-on-surface); letter-spacing: -0.02em; margin-bottom: var(--sp-sm); }
+    .cta-banner p { font-size: 16px; color: rgba(234,241,255,0.7); margin-bottom: var(--sp-xl); }
+    .btn-white { background: #fff; color: var(--primary); padding: 14px 28px; font-size: 15px; }
+    .btn-white:hover { background: var(--on-primary-container); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,0,0,0.2); }
+
+    @media (max-width: 900px) {
+      .steps-grid, .trust-grid { grid-template-columns: 1fr; }
+      .users-grid { grid-template-columns: repeat(2, 1fr); }
+      .cta-banner { padding: var(--sp-xl); }
+      .cta-banner h2 { font-size: 24px; }
+    }
+    @media (max-width: 600px) {
+      .users-grid { grid-template-columns: 1fr; }
+      .hero { padding: 60px 0 48px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="nav" role="navigation" aria-label="Main navigation">
+  <div class="nav-inner">
+    <a href="/" class="nav-logo">
+      <div class="nav-logo-mark">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 4h8M4 8h8M4 12h5"/>
+          <circle cx="13" cy="12" r="2" fill="currentColor" stroke="none"/>
+        </svg>
+      </div>
+      ContractLens
+    </a>
+    <div class="nav-links">
+      <a href="#how-it-works" class="nav-link">How it works</a>
+      <a href="#who-its-for" class="nav-link">Who it's for</a>
+      <a href="/upload" class="nav-cta">Analyse a contract</a>
+    </div>
+  </div>
+</nav>
+
+<main>
+  <!-- Hero -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-eyebrow fade-up">
+        <span></span>
+        AI-powered contract analysis
+      </div>
+      <h1 class="hero-title fade-up fade-up-1">
+        Understand <em>exactly</em> what<br/>you're signing
+      </h1>
+      <p class="hero-subtitle fade-up fade-up-2">
+        Upload any contract and get plain-English risk analysis in under 60 seconds. No lawyer needed. No legal jargon.
+      </p>
+      <div class="hero-actions fade-up fade-up-3">
+        <a href="/upload" class="btn btn-primary">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Analyse my contract — it's free
+        </a>
+        <a href="#how-it-works" class="btn btn-ghost">See how it works</a>
+      </div>
+      <div class="hero-trust fade-up fade-up-4">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Your document is never stored after analysis
+      </div>
+    </div>
+  </section>
+
+  <!-- Proof strip -->
+  <div class="proof-strip">
+    <div class="proof-strip-inner">
+      <div class="proof-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        Works on any PDF contract
+      </div>
+      <div class="proof-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        Results in under 60 seconds
+      </div>
+      <div class="proof-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        Plain English — no legal jargon
+      </div>
+      <div class="proof-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        Highlights the exact risky text
+      </div>
+    </div>
+  </div>
+
+  <!-- How it works -->
+  <section class="section" id="how-it-works">
+    <div class="container">
+      <p class="section-label">How it works</p>
+      <h2 class="section-title">Three steps to full clarity</h2>
+      <p class="section-subtitle">No account needed. Just upload your contract and get your results instantly.</p>
+
+      <div class="steps-grid">
+        <div class="step-card fade-up fade-up-1" data-step="1">
+          <div class="step-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          </div>
+          <div class="step-title">Upload your contract</div>
+          <div class="step-desc">Drag and drop any PDF — a job offer, lease, freelance agreement, vendor contract. Any format works.</div>
+        </div>
+        <div class="step-card fade-up fade-up-2" data-step="2">
+          <div class="step-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          </div>
+          <div class="step-title">AI reads every clause</div>
+          <div class="step-desc">Our AI scans every clause against 15 risk categories — liability caps, auto-renewal traps, IP grabs, and more.</div>
+        </div>
+        <div class="step-card fade-up fade-up-3" data-step="3">
+          <div class="step-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          </div>
+          <div class="step-title">Get a plain English report</div>
+          <div class="step-desc">See every risky clause explained simply, colour-coded by severity, with tips on how to push back or negotiate.</div>
+        </div>
+      </div>
+
+      <!-- Mini preview -->
+      <div class="preview-section fade-up">
+        <div class="preview-header">
+          <div class="preview-filename">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            SaaS_Vendor_Agreement_v2.pdf
+          </div>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <span class="badge badge-high">● High risk</span>
+            <span style="font-size:13px; color:var(--on-surface-variant);">24 clauses reviewed</span>
+          </div>
+        </div>
+        <div class="preview-clauses">
+          <div class="mini-clause high">
+            <div>
+              <div class="mini-clause-text">Limitation of Liability — §8.2</div>
+              <div class="mini-clause-sub">They can only pay you back 30 days of fees no matter how big the damage is</div>
+            </div>
+            <span class="badge badge-high">High risk</span>
+          </div>
+          <div class="mini-clause medium">
+            <div>
+              <div class="mini-clause-text">Auto-renewal — §4.3</div>
+              <div class="mini-clause-sub">Contract auto-renews for 12 months unless you cancel 60 days before</div>
+            </div>
+            <span class="badge badge-medium">Medium</span>
+          </div>
+          <div class="mini-clause low">
+            <div>
+              <div class="mini-clause-text">Governing Law — §15.1</div>
+              <div class="mini-clause-sub">Legal disputes handled in Delaware courts — standard clause, low concern</div>
+            </div>
+            <span class="badge badge-low">Low risk</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Who it's for -->
+  <section class="section" id="who-its-for" style="background: var(--surface-low); border-top: 1px solid var(--outline-variant); border-bottom: 1px solid var(--outline-variant);">
+    <div class="container">
+      <p class="section-label">Who it's for</p>
+      <h2 class="section-title">Built for people, not legal teams</h2>
+      <p class="section-subtitle">Anyone who signs contracts but doesn't have ₹10,000 to call a lawyer every time.</p>
+
+      <div class="users-grid">
+        <div class="user-card fade-up fade-up-1">
+          <span class="user-emoji">🎨</span>
+          <div class="user-role">Freelancers & creators</div>
+          <div class="user-scenario">Client agreements that quietly say they own everything you create — forever.</div>
+          <div class="user-risk">Common trap: IP assignment</div>
+        </div>
+        <div class="user-card fade-up fade-up-2">
+          <span class="user-emoji">🎓</span>
+          <div class="user-role">Students & freshers</div>
+          <div class="user-scenario">First job offers with a broad non-compete hiding on page 9 that locks you in for 2 years.</div>
+          <div class="user-risk">Common trap: Non-compete scope</div>
+        </div>
+        <div class="user-card fade-up fade-up-3">
+          <span class="user-emoji">🏪</span>
+          <div class="user-role">Small business owners</div>
+          <div class="user-scenario">Supplier agreements where they can change pricing with 7 days notice and no consent.</div>
+          <div class="user-risk">Common trap: Unilateral amendments</div>
+        </div>
+        <div class="user-card fade-up fade-up-4">
+          <span class="user-emoji">🏠</span>
+          <div class="user-role">Renters & tenants</div>
+          <div class="user-scenario">Lease agreements that let landlords enter without notice or charge unexpected fees.</div>
+          <div class="user-risk">Common trap: Access & penalty clauses</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Trust -->
+  <section class="section">
+    <div class="container">
+      <p class="section-label">Privacy & security</p>
+      <h2 class="section-title">Your contract stays private</h2>
+      <div class="trust-grid">
+        <div class="trust-card fade-up fade-up-1">
+          <div class="trust-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <div>
+            <div class="trust-title">Never stored after analysis</div>
+            <div class="trust-desc">Your PDF is deleted from our servers the moment analysis is complete. We never retain your documents.</div>
+          </div>
+        </div>
+        <div class="trust-card fade-up fade-up-2">
+          <div class="trust-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+          </div>
+          <div>
+            <div class="trust-title">Grounded AI — no hallucination</div>
+            <div class="trust-desc">Our AI only reasons over your actual document text. It never invents clauses or fabricates risks.</div>
+          </div>
+        </div>
+        <div class="trust-card fade-up fade-up-3">
+          <div class="trust-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div>
+            <div class="trust-title">Not a lawyer, but clearly labelled</div>
+            <div class="trust-desc">ContractLens helps you understand — it doesn't replace legal advice. Every report tells you when to consult a lawyer.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Banner -->
+  <div class="container">
+    <div class="cta-banner fade-up">
+      <h2>Stop signing blind.</h2>
+      <p>Upload your contract and know exactly what you're agreeing to — in plain English, in under 60 seconds.</p>
+      <a href="/upload" class="btn btn-white">
+        Analyse my contract — free
+      </a>
+    </div>
+  </div>
+</main>
+
+<footer class="footer">
+  <p>© 2025 ContractLens · Not legal advice · Built for everyday people</p>
+</footer>
+
+</body>
+</html>

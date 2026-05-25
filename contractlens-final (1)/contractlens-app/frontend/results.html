@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Analysis Results — ContractLens</title>
+  <link rel="stylesheet" href="/css/design.css"/>
+  <style>
+    /* ── Page layout ── */
+    .results-layout {
+      display: grid;
+      grid-template-columns: 1fr 420px;
+      gap: 0;
+      max-width: 1200px;
+      margin: 0 auto;
+      min-height: calc(100vh - 60px);
+    }
+
+    /* ── Left: document preview ── */
+    .doc-pane {
+      border-right: 1px solid var(--outline-variant);
+      padding: var(--sp-xl) var(--sp-xl);
+      position: sticky;
+      top: 60px;
+      height: calc(100vh - 60px);
+      overflow-y: auto;
+    }
+    .doc-pane-header { margin-bottom: var(--sp-lg); }
+    .doc-filename { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--on-surface); margin-bottom: 4px; }
+    .doc-filename svg { color: var(--primary); }
+    .doc-meta { font-size: 12px; color: var(--on-surface-variant); font-family: var(--font-label); }
+
+    /* Risk gauge */
+    .risk-gauge {
+      background: var(--surface-low);
+      border: 1px solid var(--outline-variant);
+      border-radius: var(--radius-xl);
+      padding: var(--sp-lg);
+      margin-bottom: var(--sp-lg);
+    }
+    .gauge-label { font-size: 11px; font-weight: 600; font-family: var(--font-label); letter-spacing: 0.05em; color: var(--on-surface-variant); text-transform: uppercase; margin-bottom: var(--sp-sm); }
+    .gauge-score { font-size: 40px; font-weight: 800; letter-spacing: -0.04em; color: var(--risk-high); line-height: 1; margin-bottom: 10px; }
+    .gauge-bar-wrap { height: 8px; background: var(--outline-variant); border-radius: var(--radius-full); overflow: hidden; margin-bottom: 8px; }
+    .gauge-bar { height: 100%; border-radius: var(--radius-full); background: linear-gradient(90deg, var(--risk-low) 0%, var(--risk-medium) 50%, var(--risk-high) 100%); width: 100%; }
+    .gauge-indicator-wrap { position: relative; height: 0; }
+    .gauge-indicator { position: absolute; top: -20px; width: 2px; height: 16px; background: var(--on-surface); border-radius: 1px; transform: translateX(-50%); transition: left 0.6s cubic-bezier(0.34,1.56,0.64,1); }
+    .gauge-badges { display: flex; justify-content: space-between; font-size: 10px; font-family: var(--font-label); color: var(--on-surface-variant); margin-top: 4px; }
+    .gauge-verdict { margin-top: var(--sp-sm); font-size: 13px; color: var(--on-surface-variant); line-height: 20px; }
+    .gauge-verdict strong { color: var(--risk-high); }
+
+    /* Metrics */
+    .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-sm); margin-bottom: var(--sp-lg); }
+
+    /* Contract text preview */
+    .doc-text-block {
+      background: var(--surface-lowest);
+      border: 1px solid var(--outline-variant);
+      border-radius: var(--radius-lg);
+      padding: var(--sp-md);
+      font-size: 12px; line-height: 20px;
+      color: var(--on-surface-variant);
+      max-height: 320px;
+      overflow-y: auto;
+    }
+    .doc-text-block h4 { font-size: 12px; font-weight: 600; color: var(--on-surface); margin-bottom: 10px; font-family: var(--font-label); letter-spacing: 0.02em; }
+    .doc-para { margin-bottom: 8px; }
+    .highlight-chip {
+      display: inline; padding: 1px 4px; border-radius: 3px;
+      font-weight: 500; font-size: 11px;
+    }
+    .chip-high { background: rgba(192,57,43,0.12); color: var(--risk-high); }
+    .chip-medium { background: rgba(217,119,6,0.12); color: var(--risk-medium); }
+
+    /* ── Right: analysis pane ── */
+    .analysis-pane {
+      padding: var(--sp-xl);
+      overflow-y: auto;
+      height: calc(100vh - 60px);
+      position: sticky;
+      top: 60px;
+    }
+    .analysis-header { margin-bottom: var(--sp-lg); }
+    .analysis-title { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; color: var(--on-surface); margin-bottom: 4px; }
+    .analysis-sub { font-size: 13px; color: var(--on-surface-variant); }
+
+    /* Filter bar */
+    .filter-bar {
+      display: flex; gap: 6px; margin-bottom: var(--sp-lg);
+      background: var(--surface-low); padding: 4px; border-radius: var(--radius-lg);
+      border: 1px solid var(--outline-variant);
+    }
+    .filter-btn {
+      flex: 1; padding: 7px; font-size: 12px; font-weight: 500;
+      font-family: var(--font-label); border: none; border-radius: var(--radius-md);
+      background: transparent; color: var(--on-surface-variant);
+      cursor: pointer; transition: all 150ms; text-align: center;
+    }
+    .filter-btn.active { background: var(--surface-lowest); color: var(--on-surface); box-shadow: var(--shadow-card); }
+    .filter-btn .count {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 18px; height: 18px; border-radius: 50%; font-size: 10px; font-weight: 700;
+      margin-left: 4px;
+    }
+    .filter-btn.filter-high .count { background: var(--risk-high-badge-bg); color: var(--risk-high-badge-text); }
+    .filter-btn.filter-medium .count { background: var(--risk-medium-badge-bg); color: var(--risk-medium-badge-text); }
+    .filter-btn.filter-low .count { background: var(--risk-low-badge-bg); color: var(--risk-low-badge-text); }
+
+    /* Clause cards */
+    .clauses-list { display: flex; flex-direction: column; gap: var(--sp-sm); }
+
+    .clause-card {
+      background: var(--surface-lowest);
+      border: 1px solid var(--outline-variant);
+      border-left: 4px solid;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      transition: box-shadow 150ms;
+    }
+    .clause-card.high { border-left-color: var(--risk-high); }
+    .clause-card.medium { border-left-color: var(--risk-medium); }
+    .clause-card.low { border-left-color: var(--risk-low); }
+    .clause-card:hover { box-shadow: var(--shadow-hover); }
+
+    .clause-header {
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+      padding: 14px 16px;
+      cursor: pointer;
+    }
+    .clause-title-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
+    .clause-title { font-size: 13px; font-weight: 600; color: var(--on-surface); }
+    .clause-summary { font-size: 12px; color: var(--on-surface-variant); line-height: 18px; max-width: 280px; }
+    .clause-meta-row { display: flex; align-items: center; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+    .clause-expand-icon { color: var(--on-surface-variant); transition: transform 200ms; flex-shrink: 0; margin-top: 2px; }
+    .clause-card.open .clause-expand-icon { transform: rotate(180deg); }
+
+    /* Severity dots */
+    .dots-row { display: flex; gap: 3px; flex-shrink: 0; }
+
+    /* Expanded content */
+    .clause-body {
+      display: none;
+      padding: 0 16px 16px;
+      border-top: 1px solid var(--outline-variant);
+    }
+    .clause-card.open .clause-body { display: block; }
+
+    .explanation-block { padding-top: 14px; }
+    .explanation-label { font-size: 11px; font-weight: 600; font-family: var(--font-label); letter-spacing: 0.05em; color: var(--on-surface-variant); text-transform: uppercase; margin-bottom: 6px; }
+    .explanation-text { font-size: 13px; color: var(--on-surface); line-height: 20px; margin-bottom: var(--sp-md); }
+    .quote-block {
+      background: var(--surface-low); border-left: 3px solid var(--outline-variant);
+      border-radius: 0 var(--radius-md) var(--radius-md) 0;
+      padding: 10px 14px; margin-bottom: var(--sp-md);
+    }
+    .quote-label { font-size: 10px; font-weight: 600; font-family: var(--font-label); letter-spacing: 0.05em; color: var(--on-surface-variant); text-transform: uppercase; margin-bottom: 4px; }
+    .quote-text { font-size: 12px; color: var(--on-surface); font-style: italic; line-height: 18px; }
+
+    /* Negotiate tip */
+    .negotiate-toggle {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; font-weight: 600; color: var(--primary);
+      background: var(--on-primary-container);
+      border: 1px solid rgba(53,37,205,0.15);
+      border-radius: var(--radius); padding: 8px 12px;
+      cursor: pointer; font-family: var(--font-primary);
+      transition: all 150ms; width: 100%;
+    }
+    .negotiate-toggle:hover { background: #d3cfff; }
+    .negotiate-tip {
+      display: none; margin-top: 8px;
+      background: var(--surface-lowest);
+      border: 1px solid rgba(53,37,205,0.12);
+      border-radius: var(--radius-md); padding: 12px 14px;
+      font-size: 12px; color: var(--on-surface); line-height: 19px;
+    }
+    .negotiate-tip.visible { display: block; }
+    .negotiate-tip strong { color: var(--primary); font-weight: 600; }
+
+    /* Disclaimer */
+    .disclaimer {
+      margin-top: var(--sp-xl);
+      background: var(--surface-low);
+      border: 1px solid var(--outline-variant);
+      border-radius: var(--radius-lg);
+      padding: 12px 14px;
+      font-size: 12px; color: var(--on-surface-variant); line-height: 18px;
+      display: flex; gap: 10px; align-items: flex-start;
+    }
+    .disclaimer svg { flex-shrink: 0; width: 16px; height: 16px; color: var(--outline); margin-top: 1px; }
+
+    /* ── Mobile stacked ── */
+    @media (max-width: 900px) {
+      .results-layout { grid-template-columns: 1fr; }
+      .doc-pane { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--outline-variant); }
+      .analysis-pane { position: static; height: auto; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="/" class="nav-logo">
+      <div class="nav-logo-mark">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 4h8M4 8h8M4 12h5"/>
+          <circle cx="13" cy="12" r="2" fill="currentColor" stroke="none"/>
+        </svg>
+      </div>
+      ContractLens
+    </a>
+    <div class="nav-links">
+      <a href="/upload" class="btn btn-ghost btn-sm">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Analyse another
+      </a>
+    </div>
+  </div>
+</nav>
+
+<div class="results-layout">
+
+  <!-- LEFT: Document overview -->
+  <div class="doc-pane fade-up">
+    <div class="doc-pane-header">
+      <div class="doc-filename">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        SaaS_Vendor_Agreement_v2.pdf
+      </div>
+      <div class="doc-meta">24 clauses · 14 pages · Analysed just now</div>
+    </div>
+
+    <!-- Risk gauge -->
+    <div class="risk-gauge">
+      <div class="gauge-label">Overall risk score</div>
+      <div class="gauge-score">72<span style="font-size:20px;font-weight:400;color:var(--on-surface-variant)">/100</span></div>
+      <div class="gauge-bar-wrap">
+        <div class="gauge-bar"></div>
+      </div>
+      <div style="position:relative; height: 16px; margin-top: -22px; margin-bottom: 8px;">
+        <div class="gauge-indicator" id="gaugeIndicator" style="left:72%"></div>
+      </div>
+      <div class="gauge-badges">
+        <span>Low</span><span>Medium</span><span>High</span>
+      </div>
+      <div class="gauge-verdict">
+        <strong>High risk.</strong> This contract contains 3 clauses that significantly favour the other party. We recommend reviewing clauses §8.2 and §12.1 before signing.
+      </div>
+    </div>
+
+    <!-- Metrics -->
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-label">Clauses reviewed</div>
+        <div class="metric-value">24</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">High risk</div>
+        <div class="metric-value red">3</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Medium risk</div>
+        <div class="metric-value amber">2</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Unusual clauses</div>
+        <div class="metric-value">2</div>
+      </div>
+    </div>
+
+    <!-- Contract text preview -->
+    <div class="doc-text-block">
+      <h4>Contract preview</h4>
+      <div class="doc-para">This Software as a Service Agreement ("Agreement") is entered into as of the Effective Date by and between the Provider and the Customer.</div>
+      <div class="doc-para"><strong>4.3 Auto-Renewal.</strong> Unless Customer provides written notice of non-renewal at least <span class="highlight-chip chip-medium">sixty (60) days</span> prior to the end of the then-current subscription term, this Agreement shall automatically renew for successive twelve (12) month periods.</div>
+      <div class="doc-para"><strong>6.1 Intellectual Property.</strong> Customer acknowledges that <span class="highlight-chip chip-high">all work product, outputs, analyses, and derivative works</span> created using the Platform shall be the sole and exclusive property of Provider.</div>
+      <div class="doc-para"><strong>8.2 Limitation of Liability.</strong> In no event shall Provider's aggregate liability exceed <span class="highlight-chip chip-high">the total fees paid by Customer in the thirty (30) day period</span> immediately preceding the claim giving rise to liability.</div>
+      <div class="doc-para"><strong>12.1 Modifications.</strong> Provider reserves the right to modify these Terms at any time. Provider will notify Customer of changes by email with a minimum of <span class="highlight-chip chip-high">seven (7) days notice.</span> Continued use constitutes acceptance.</div>
+      <div class="doc-para"><strong>15.1 Governing Law.</strong> This Agreement shall be governed by the laws of the State of Delaware, United States, without regard to conflict of law principles.</div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Analysis cards -->
+  <div class="analysis-pane fade-up fade-up-1">
+    <div class="analysis-header">
+      <div class="analysis-title">Risk analysis</div>
+      <div class="analysis-sub">Click any clause to see the full explanation and negotiation tips</div>
+    </div>
+
+    <!-- Filter bar -->
+    <div class="filter-bar" role="group" aria-label="Filter clauses by risk level">
+      <button class="filter-btn active" data-filter="all">All<span class="count" style="background:var(--surface-container);color:var(--on-surface-variant)">5</span></button>
+      <button class="filter-btn filter-high" data-filter="high">High<span class="count">3</span></button>
+      <button class="filter-btn filter-medium" data-filter="medium">Medium<span class="count">2</span></button>
+      <button class="filter-btn filter-low" data-filter="low">Low<span class="count">0</span></button>
+    </div>
+
+    <!-- Clause cards -->
+    <div class="clauses-list" id="clausesList">
+
+      <!-- Clause 1: HIGH -->
+      <div class="clause-card high" data-risk="high">
+        <div class="clause-header" onclick="toggleClause(this)">
+          <div>
+            <div class="clause-title-row">
+              <span class="clause-title">Limitation of Liability</span>
+              <span class="badge badge-high">High risk</span>
+            </div>
+            <div class="clause-summary">They can only pay you back 30 days of fees — no matter how big the damage</div>
+            <div class="clause-meta-row">
+              <span class="badge badge-neutral">Liability cap</span>
+              <span class="badge badge-neutral">§8.2 · Page 7</span>
+              <div class="dots-row">
+                <div class="severity-dot filled-high"></div>
+                <div class="severity-dot filled-high"></div>
+                <div class="severity-dot filled-high"></div>
+                <div class="severity-dot filled-high"></div>
+                <div class="severity-dot filled-high"></div>
+              </div>
+            </div>
+          </div>
+          <svg class="clause-expand-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="clause-body">
+          <div class="explanation-block">
+            <div class="explanation-label">What this means</div>
+            <div class="explanation-text">If the provider's software causes you a massive data breach, loses all your business records, or goes offline for weeks — the maximum they'll ever pay you back is one month's subscription fee. For a ₹5,000/month SaaS tool, that's ₹5,000. Even if you lose ₹50 lakh worth of business. This is extremely one-sided — industry standard is 12 months of fees.</div>
+            <div class="quote-block">
+              <div class="quote-label">Exact clause text</div>
+              <div class="quote-text">"Provider's aggregate liability shall not exceed the total fees paid by Customer in the thirty (30) day period immediately preceding the claim giving rise to liability."</div>
+            </div>
+            <button class="negotiate-toggle" onclick="toggleNegotiate(this)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+              How to negotiate this
+            </button>
+            <div class="negotiate-tip">
+              <strong>Ask for this instead:</strong> "Provider's aggregate liability shall not exceed the total fees paid by Customer in the twelve (12) month period preceding the claim."<br/><br/>
+              This changes the cap from 30 days to 12 months — a 12× improvement. Most vendors will accept this without pushback. If they refuse, ask for a minimum floor of ₹50,000 regardless of subscription amount.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Clause 2: HIGH -->
+      <div class="clause-card high" data-risk="high">
+        <div class="clause-header" onclick="toggleClause(this)">
+          <div>
+            <div class="clause-title-row">
+              <span class="clause-title">Unilateral amendment rights</span>
+              <span class="badge badge-high">High risk</span>
+            </div>
+            <div class="clause-summary">They can change any rule — including pricing — with just 7 days notice</div>
+            <div class="clause-meta-row">
+              <span class="badge badge-neutral">Amendment rights</span>
+              <span class="badge badge-neutral">§12.1 · Page 11</span>
+              <div class="dots-row">
+                <div class="severity-dot filled-high"></div>
+                <div class="severity-dot filled-high"></div>
+                <div class="severity-dot filled-high"></div>
+                <div class="severity-dot filled-high"></div>
+                <div class="severity-dot empty"></div>
+              </div>
+            </div>
+          </div>
+          <svg class="clause-expand-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="clause-body">
+          <div class="explanation-block">
+            <div class="explanation-label">What this means</div>
+            <div class="explanation-text">The provider can change literally any part of the contract — prices, data usage rules, features, cancellation terms — and all they have to do is send you an email 7 days before. If you keep using the service after those 7 days, you've automatically agreed to the new terms. You have no actual say.</div>
+            <div class="quote-block">
+              <div class="quote-label">Exact clause text</div>
+              <div class="quote-text">"Provider reserves the right to modify these Terms at any time. Provider will notify Customer of changes via email with a minimum of seven (7) days notice. Continued use of the Service constitutes acceptance of the modified Terms."</div>
+            </div>
+            <button class="negotiate-toggle" onclick="toggleNegotiate(this)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+              How to negotiate this
+            </button>
+            <div class="negotiate-tip">
+              <strong>Minimum ask:</strong> Change 7 days to 30 days notice, and add "Material changes require Customer's written consent."<br/><br/>
+              <strong>Better ask:</strong> "Price changes shall not apply to the current contract term and shall only take effect upon renewal." This locks in your price for the contract duration.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Clause 3: HIGH -->
+      <div class="clause-card high" data-risk="high">
+        <div class="clause-header" onclick="toggleClause(this)">
+          <div>
+            <div class="clause-title-row">
+              <span class="clause-title">Broad IP assignment</span>
+              <span class="badge badge-high">High risk</span>
+            </div>
+            <div class="clause-summary">Everything you build using their platform belongs to them</div>
+            <div class="clause-meta-row">
+              <span class="badge badge-neutral">IP ownership</span>
+              <span class="badge badge-neutral">§6.1 · Page 5</span>
+              <div class="dots-row">
+                <div class="severity-dot filled-high"></div>
+                <div class="severity-dot filled-high"></div>
+                <div class="severity-dot filled-high"></div>
+                <div class="severity-dot filled-high"></div>
+                <div class="severity-dot empty"></div>
+              </div>
+            </div>
+          </div>
+          <svg class="clause-expand-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="clause-body">
+          <div class="explanation-block">
+            <div class="explanation-label">What this means</div>
+            <div class="explanation-text">Any reports, analyses, documents, or outputs you generate using their platform automatically become their property. If you use this tool to write your company's strategy document or financial projections, they technically own it. This is unusually broad — most SaaS tools only claim ownership of the platform itself, not what you produce with it.</div>
+            <div class="quote-block">
+              <div class="quote-label">Exact clause text</div>
+              <div class="quote-text">"Customer acknowledges that all work product, outputs, analyses, and derivative works created using the Platform shall be the sole and exclusive property of Provider."</div>
+            </div>
+            <button class="negotiate-toggle" onclick="toggleNegotiate(this)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+              How to negotiate this
+            </button>
+            <div class="negotiate-tip">
+              <strong>This clause should be deleted entirely</strong> or replaced with: "Customer retains full ownership of all data, documents, and outputs generated by Customer using the Platform."<br/><br/>
+              This is a non-negotiable red flag. If the vendor won't change it, walk away.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Clause 4: MEDIUM -->
+      <div class="clause-card medium" data-risk="medium">
+        <div class="clause-header" onclick="toggleClause(this)">
+          <div>
+            <div class="clause-title-row">
+              <span class="clause-title">Auto-renewal</span>
+              <span class="badge badge-medium">Medium risk</span>
+            </div>
+            <div class="clause-summary">Renews for 12 months automatically unless you cancel 60 days before</div>
+            <div class="clause-meta-row">
+              <span class="badge badge-neutral">Auto-renewal</span>
+              <span class="badge badge-neutral">§4.3 · Page 3</span>
+              <div class="dots-row">
+                <div class="severity-dot filled-medium"></div>
+                <div class="severity-dot filled-medium"></div>
+                <div class="severity-dot filled-medium"></div>
+                <div class="severity-dot empty"></div>
+                <div class="severity-dot empty"></div>
+              </div>
+            </div>
+          </div>
+          <svg class="clause-expand-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="clause-body">
+          <div class="explanation-block">
+            <div class="explanation-label">What this means</div>
+            <div class="explanation-text">The contract locks you in for another full year automatically. The 60-day cancellation window is longer than the typical 30-day standard — meaning you need to decide about renewal two months before it ends, which is easy to miss. If you miss it, you're paying for another year whether you want to or not.</div>
+            <div class="quote-block">
+              <div class="quote-label">Exact clause text</div>
+              <div class="quote-text">"Unless Customer provides written notice of non-renewal at least sixty (60) days prior to the end of the then-current subscription term, this Agreement shall automatically renew for successive twelve (12) month periods."</div>
+            </div>
+            <button class="negotiate-toggle" onclick="toggleNegotiate(this)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+              How to negotiate this
+            </button>
+            <div class="negotiate-tip">
+              <strong>Ask to reduce to 30 days:</strong> "Unless Customer provides written notice of non-renewal at least thirty (30) days prior to the end of the then-current term..."<br/><br/>
+              Also ask the vendor to send you a renewal reminder email 90 days before expiry. Many will agree to this as a goodwill gesture. Set a calendar reminder for yourself regardless.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Clause 5: MEDIUM (low end) -->
+      <div class="clause-card medium" data-risk="medium">
+        <div class="clause-header" onclick="toggleClause(this)">
+          <div>
+            <div class="clause-title-row">
+              <span class="clause-title">Governing law</span>
+              <span class="badge badge-medium">Review</span>
+            </div>
+            <div class="clause-summary">Any dispute must be resolved in Delaware courts, USA</div>
+            <div class="clause-meta-row">
+              <span class="badge badge-neutral">Jurisdiction</span>
+              <span class="badge badge-neutral">§15.1 · Page 13</span>
+              <div class="dots-row">
+                <div class="severity-dot filled-medium"></div>
+                <div class="severity-dot empty"></div>
+                <div class="severity-dot empty"></div>
+                <div class="severity-dot empty"></div>
+                <div class="severity-dot empty"></div>
+              </div>
+            </div>
+          </div>
+          <svg class="clause-expand-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="clause-body">
+          <div class="explanation-block">
+            <div class="explanation-label">What this means</div>
+            <div class="explanation-text">If you ever have a legal dispute with this vendor, you'd need to file in a Delaware court in the United States. If you're based in India, that means international litigation — which is extremely expensive and impractical for most businesses. This is standard for US companies but worth knowing.</div>
+            <div class="quote-block">
+              <div class="quote-label">Exact clause text</div>
+              <div class="quote-text">"This Agreement shall be governed by the laws of the State of Delaware, United States, without regard to its conflict of law provisions."</div>
+            </div>
+            <button class="negotiate-toggle" onclick="toggleNegotiate(this)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+              How to negotiate this
+            </button>
+            <div class="negotiate-tip">
+              <strong>If you're India-based:</strong> Ask to add "or the courts of [your city], India, at Customer's election" — giving you choice of jurisdiction.<br/><br/>
+              Alternatively, ask for international arbitration (e.g. ICC or SIAC) instead of court proceedings. Most global SaaS vendors will accept this as it protects them too.
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /clauses-list -->
+
+    <!-- Disclaimer -->
+    <div class="disclaimer">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span>ContractLens is an AI analysis tool, not legal advice. For high-value or complex contracts, always consult a qualified lawyer before signing.</span>
+    </div>
+
+  </div><!-- /analysis-pane -->
+</div><!-- /results-layout -->
+
+<script>
+function toggleClause(header) {
+  const card = header.closest('.clause-card');
+  card.classList.toggle('open');
+}
+
+function toggleNegotiate(btn) {
+  const tip = btn.nextElementSibling;
+  tip.classList.toggle('visible');
+  btn.style.background = tip.classList.contains('visible') ? '#d3cfff' : '';
+}
+
+// Filter logic
+const filterBtns = document.querySelectorAll('.filter-btn');
+const cards = document.querySelectorAll('.clause-card');
+
+filterBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    filterBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const f = btn.dataset.filter;
+    cards.forEach(card => {
+      const show = f === 'all' || card.dataset.risk === f;
+      card.style.display = show ? 'block' : 'none';
+    });
+  });
+});
+
+// Open first card by default
+document.querySelector('.clause-card .clause-header').click();
+</script>
+</body>
+</html>
+<script src="/js/api.js"></script>
+<script>
+(async function() {
+  const { getResults, getDocumentIdFromURL, APIError } = ContractLensAPI;
+  const documentId = getDocumentIdFromURL();
+  if (!documentId) return; // No ID — show mock data
+
+  try {
+    const data = await getResults(documentId);
+
+    // Update header
+    document.querySelector('.doc-filename').innerHTML = `
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      ${data.filename}`;
+    document.querySelector('.doc-meta').textContent =
+      `${data.clause_count} clauses · ${data.page_count} pages · Analysed just now`;
+
+    // Update metric cards
+    const mvs = document.querySelectorAll('.metric-value');
+    if (mvs[0]) mvs[0].textContent = data.clause_count;
+    if (mvs[1]) mvs[1].textContent = data.high_risk_count;
+    if (mvs[2]) mvs[2].textContent = data.medium_risk_count;
+
+    // Update gauge
+    const score = Math.round(data.risk_score);
+    const gaugeScore = document.querySelector('.gauge-score');
+    if (gaugeScore) gaugeScore.innerHTML = `${score}<span style="font-size:20px;font-weight:400;color:var(--on-surface-variant)">/100</span>`;
+    const gaugeIndicator = document.getElementById('gaugeIndicator');
+    if (gaugeIndicator) gaugeIndicator.style.left = score + '%';
+    const riskColor = data.risk_level === 'high' ? 'var(--risk-high)' : data.risk_level === 'medium' ? 'var(--risk-medium)' : 'var(--risk-low)';
+    if (gaugeScore) gaugeScore.style.color = riskColor;
+
+    // Build clause cards
+    if (data.clauses && data.clauses.length > 0) {
+      const list = document.getElementById('clausesList');
+      list.innerHTML = '';
+      data.clauses.forEach(clause => {
+        clause.risk_results.forEach(rr => {
+          const dots = Array.from({length:5},(_,i)=>
+            `<div class="severity-dot ${i < rr.severity ? 'filled-'+rr.risk_level : 'empty'}"></div>`).join('');
+          const card = document.createElement('div');
+          card.className = `clause-card ${rr.risk_level}`;
+          card.dataset.risk = rr.risk_level;
+          card.innerHTML = `
+            <div class="clause-header" onclick="toggleClause(this)">
+              <div>
+                <div class="clause-title-row">
+                  <span class="clause-title">${clause.title || 'Clause '+clause.clause_number}</span>
+                  <span class="badge badge-${rr.risk_level}">${rr.risk_level.charAt(0).toUpperCase()+rr.risk_level.slice(1)} risk</span>
+                </div>
+                <div class="clause-summary">${rr.explanation}</div>
+                <div class="clause-meta-row">
+                  <span class="badge badge-neutral">${rr.category}</span>
+                  <span class="badge badge-neutral">${clause.clause_number ? '§'+clause.clause_number+' · ' : ''}Page ${clause.page}</span>
+                  <div class="dots-row">${dots}</div>
+                </div>
+              </div>
+              <svg class="clause-expand-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+            <div class="clause-body">
+              <div class="explanation-block">
+                <div class="explanation-label">What this means</div>
+                <div class="explanation-text">${rr.explanation}</div>
+                ${rr.flagged_text ? `<div class="quote-block"><div class="quote-label">Exact clause text</div><div class="quote-text">"${rr.flagged_text}"</div></div>` : ''}
+                ${rr.negotiate_tip ? `<button class="negotiate-toggle" onclick="toggleNegotiate(this)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>How to negotiate this</button><div class="negotiate-tip">${rr.negotiate_tip}</div>` : ''}
+              </div>
+            </div>`;
+          list.appendChild(card);
+        });
+      });
+      const total = data.clauses.reduce((a,c)=>a+c.risk_results.length,0);
+      const allBtn = document.querySelector('[data-filter="all"] .count');
+      const highBtn = document.querySelector('[data-filter="high"] .count');
+      const medBtn  = document.querySelector('[data-filter="medium"] .count');
+      const lowBtn  = document.querySelector('[data-filter="low"] .count');
+      if (allBtn)  allBtn.textContent  = total;
+      if (highBtn) highBtn.textContent = data.high_risk_count;
+      if (medBtn)  medBtn.textContent  = data.medium_risk_count;
+      if (lowBtn)  lowBtn.textContent  = data.low_risk_count;
+    }
+  } catch(e) {
+    console.warn('API load failed, showing mock data:', e.message);
+  }
+})();
+</script>
+</body>
+</html>
